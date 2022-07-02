@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"laynegu.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1、内存分区 代码经过预处理、编译、汇编、链接4步后生成一个可执行程序。在 Windows 下，程序是一个普通的可执行文件，以下列出一个二进制可执行文件的基本情况：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="go 内存解析">
+<meta property="og:url" content="https://laynegu.github.io/2022/07/02/go%E5%86%85%E5%AD%98/index.html">
+<meta property="og:site_name" content="layne&#39;s Blog">
+<meta property="og:description" content="1、内存分区 代码经过预处理、编译、汇编、链接4步后生成一个可执行程序。在 Windows 下，程序是一个普通的可执行文件，以下列出一个二进制可执行文件的基本情况：">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://pic2.zhimg.com/80/v2-d3e619e2bcc7aa1ce897a5bb58061ee9_720w.jpg">
+<meta property="og:image" content="https://pic4.zhimg.com/80/v2-b596bf54e24d572cf51dfcbbc0e113a7_720w.jpg">
+<meta property="og:image" content="https://pic1.zhimg.com/80/v2-e3c5fe642df23bf71d2389cb98db3fa0_720w.jpg">
+<meta property="og:image" content="https://pic2.zhimg.com/80/v2-d5136a74adf21bafde003158789e839d_720w.jpg">
+<meta property="article:published_time" content="2022-07-02T11:02:37.000Z">
+<meta property="article:modified_time" content="2022-07-02T11:17:44.687Z">
+<meta property="article:author" content="layne">
+<meta property="article:tag" content="go">
+<meta property="article:tag" content="内存">
+<meta property="article:tag" content="后端">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://pic2.zhimg.com/80/v2-d3e619e2bcc7aa1ce897a5bb58061ee9_720w.jpg">
+
+<link rel="canonical" href="https://laynegu.github.io/2022/07/02/go%E5%86%85%E5%AD%98/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>go 内存解析 | layne's Blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">layne's Blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://laynegu.github.io/2022/07/02/go%E5%86%85%E5%AD%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="layne">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="layne's Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          go 内存解析
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2022-07-02 19:02:37 / 修改时间：19:17:44" itemprop="dateCreated datePublished" datetime="2022-07-02T19:02:37+08:00">2022-07-02</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%90%8E%E7%AB%AF/" itemprop="url" rel="index"><span itemprop="name">后端</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="1、内存分区"><a href="#1、内存分区" class="headerlink" title="1、内存分区"></a>1、内存分区</h2><blockquote>
+<p>代码经过预处理、编译、汇编、链接4步后生成一个可执行程序。<br>在 Windows 下，程序是一个普通的可执行文件，以下列出一个二进制可执行文件的基本情况：</p>
+</blockquote>
+<p><img src="https://pic2.zhimg.com/80/v2-d3e619e2bcc7aa1ce897a5bb58061ee9_720w.jpg" alt="img"></p>
+<blockquote>
+<p>通过上图可以得知，在没有运行程序前，也就是说程序没有加载到内存前，可执行程序内部已经分好三段信息，分别为<strong>代码区（text）</strong>、<strong>数据区（data）</strong>和<strong>未初始化数据区（bss）</strong>3 个部分。<br>有些人直接把data和bss合起来叫做<strong>静态区</strong>或<strong>全局区</strong>。</p>
+</blockquote>
+<h3 id="1、1-代码区（text）"><a href="#1、1-代码区（text）" class="headerlink" title="1、1 代码区（text）"></a>1、1 代码区（text）</h3><blockquote>
+<p>存放 CPU 执行的机器指令。通常代码区是可共享的（即另外的执行程序可以调用它），使其可<strong>共享</strong>的目的是对于频繁被执行的程序，只需要在内存中有一份代码即可。代码区通常是<strong>只读</strong>的，使其只读的原因是防止程序意外地修改了它的指令。另外，代码区还规划了局部变量的相关信息。</p>
+</blockquote>
+<h3 id="1、2-全局初始化数据区-x2F-静态数据区（data）"><a href="#1、2-全局初始化数据区-x2F-静态数据区（data）" class="headerlink" title="1、2 全局初始化数据区&#x2F;静态数据区（data）"></a>1、2 全局初始化数据区&#x2F;静态数据区（data）</h3><blockquote>
+<p>该区包含了在程序中明确被初始化的全局变量、已经初始化的静态变量（包括全局静态变量和局部静态变量）和常量数据（如字符串常量）。</p>
+</blockquote>
+<h3 id="1、3-未初始化数据区（bss）"><a href="#1、3-未初始化数据区（bss）" class="headerlink" title="1、3 未初始化数据区（bss）"></a>1、3 未初始化数据区（bss）</h3><blockquote>
+<p>存入的是全局未初始化变量和未初始化静态变量。未初始化数据区的数据在程序开始执行之前被内核初始化为 0 或者空（nil）。<br>程序在加载到内存前，代码区和全局区(data和bss)的大小就是固定的，程序运行期间不能改变。<br>然后，运行可执行程序，系统把程序加载到内存，除了根据可执行程序的信息分出代码区（text）、数据区（data）和未初始化数据区（bss）之外，还额外增加了<strong>栈区</strong>、<strong>堆区</strong>。</p>
+</blockquote>
+<h3 id="1、4-栈区（stack）"><a href="#1、4-栈区（stack）" class="headerlink" title="1、4 栈区（stack）"></a>1、4 栈区（stack）</h3><blockquote>
+<p>栈是一种先进后出的内存结构，由编译器自动分配释放，存放函数的参数值、返回值、局部变量等。<br>在程序运行过程中实时加载和释放，因此，局部变量的生存周期为申请到释放该段栈空间。</p>
+</blockquote>
+<h3 id="1、5-堆区（heap）"><a href="#1、5-堆区（heap）" class="headerlink" title="1、5 堆区（heap）"></a>1、5 堆区（heap）</h3><blockquote>
+<p>堆是一个大容器，它的容量要远远大于栈，但没有栈那样先进后出的顺序。用于动态内存分配。堆在内存中位于BSS区和栈区之间。<br>根据语言的不同，如C语言、C++语言，一般由程序员分配和释放，若程序员不释放，程序结束时由操作系统回收。<br>Go语言、Java、python等都有垃圾回收机制（GC），用来自动释放内存。</p>
+</blockquote>
+<p><img src="https://pic4.zhimg.com/80/v2-b596bf54e24d572cf51dfcbbc0e113a7_720w.jpg" alt="img"></p>
+<h2 id="2、-Go-Runtime内存分配"><a href="#2、-Go-Runtime内存分配" class="headerlink" title="2、 Go Runtime内存分配"></a>2、 Go Runtime内存分配</h2><blockquote>
+<p>Go语言内置运行时（就是Runtime），抛弃了传统的内存分配方式，改为自主管理。这样可以自主地实现更好的内存使用模式，比如内存池、预分配等等。这样，不会每次内存分配都需要进行系统调用。<br>Golang运行时的内存分配算法主要源自 Google 为 C 语言开发的<strong>TCMalloc算法</strong>，全称<strong>Thread-Caching Malloc</strong>。<br>核心思想就是把内存分为多级管理，从而降低锁的粒度。它将可用的堆内存采用二级分配的方式进行管理。<br>每个线程都会自行维护一个独立的内存池，进行内存分配时优先从该内存池中分配，当内存池不足时才会向全局内存池申请，以避免不同线程对全局内存池的频繁竞争。</p>
+</blockquote>
+<h3 id="2、1-基本策略"><a href="#2、1-基本策略" class="headerlink" title="2、1 基本策略"></a>2、1 基本策略</h3><ul>
+<li>每次从操作系统申请一大块内存，以减少系统调用。</li>
+<li>将申请的大块内存按照特定的大小预先的进行切分成小块，构成链表。</li>
+<li>为对象分配内存时，只需从大小合适的链表提取一个小块即可。</li>
+<li>回收对象内存时，将该小块内存重新归还到原链表，以便复用。</li>
+<li>如果闲置内存过多，则尝试归还部分内存给操作系统，降低整体开销。</li>
+</ul>
+<p><strong>注意：</strong>内存分配器只管理内存块，并不关心对象状态，而且不会主动回收，垃圾回收机制在完成清理操作后，触发内存分配器的回收操作</p>
+<h3 id="2、2-内存管理单元"><a href="#2、2-内存管理单元" class="headerlink" title="2、2 内存管理单元"></a>2、2 内存管理单元</h3><blockquote>
+<p>分配器将其管理的内存块分为两种：</p>
+</blockquote>
+<ul>
+<li>span：由多个连续的页（page [大小：8KB]）组成的大块内存。</li>
+<li>object：将span按照特定大小切分成多个小块，每一个小块都可以存储对象。</li>
+</ul>
+<p>用途：<br>span 面向内部管理<br>object 面向对象分配</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">go //path:Go SDK/src/runtime/malloc.go</span><br><span class="line"></span><br><span class="line"> _PageShift      = 13 </span><br><span class="line">_PageSize = 1 &lt;&lt; _PageShift       //8KB</span><br><span class="line"> </span><br></pre></td></tr></table></figure>
+
+<p><img src="https://pic1.zhimg.com/80/v2-e3c5fe642df23bf71d2389cb98db3fa0_720w.jpg" alt="img"></p>
+<blockquote>
+<p>在基本策略中讲到，Go在程序启动的时候，会先向操作系统申请一块内存，切成小块后自己进行管理。<br>申请到的内存块被分配了三个区域，在X64上分别是512MB，16GB，512GB大小。<br><strong>注意：</strong>这时还只是一段虚拟的地址空间，并不会真正地分配内存</p>
+</blockquote>
+<p><img src="https://pic2.zhimg.com/80/v2-d5136a74adf21bafde003158789e839d_720w.jpg" alt="img"></p>
+<ul>
+<li>arena区域</li>
+</ul>
+<p>就是所谓的堆区，Go动态分配的内存都是在这个区域，它把内存分割成8KB大小的页，一些页组合起来称为mspan。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"> go   //path:Go SDK/src/runtime/mheap.go</span><br><span class="line"></span><br><span class="line"> type mspan struct &#123;      </span><br><span class="line"> next           mspan       // 双向链表中 指向下一个       </span><br><span class="line"> prev           mspan       // 双向链表中 指向前一个       </span><br><span class="line"> startAddr      uintptr      // 起始序号       </span><br><span class="line">npages         uintptr      // 管理的页数       </span><br><span class="line">manualFreeList gclinkptr    // 待分配的 object 链表        </span><br><span class="line">nelems            uintptr      // 块个数，表示有多少个块可供分配        </span><br><span class="line">allocCount     uint16      // 已分配块的个数       </span><br><span class="line">...   </span><br><span class="line">&#125;   </span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>bitmap区域</li>
+</ul>
+<p>标识arena区域哪些地址保存了对象，并且用4bit标志位表示对象是否包含指针、GC标记信息。</p>
+<ul>
+<li>spans区域</li>
+</ul>
+<p>存放mspan的指针，每个指针对应一页，所以spans区域的大小就是512GB&#x2F;8KB*8B&#x3D;512MB。<br>除以8KB是计算arena区域的页数，而最后乘以8是计算spans区域所有指针的大小。</p>
+<h3 id="2、3-内存管理组件"><a href="#2、3-内存管理组件" class="headerlink" title="2、3 内存管理组件"></a>2、3 内存管理组件</h3><blockquote>
+<p>内存分配由内存分配器完成。分配器由3种组件构成：</p>
+</blockquote>
+<ul>
+<li>cache</li>
+</ul>
+<p>每个运行期工作线程都会绑定一个cache，用于无锁 object 的分配</p>
+<ul>
+<li>central</li>
+</ul>
+<p>为所有cache提供切分好的后备span资源</p>
+<ul>
+<li>heap</li>
+</ul>
+<p>管理闲置span，需要时向操作系统申请内存</p>
+<h3 id="2、3、1-cache"><a href="#2、3、1-cache" class="headerlink" title="2、3、1 cache"></a>2、3、1 cache</h3><blockquote>
+<p>cache：每个工作线程都会绑定一个mcache，本地缓存可用的mspan资源。<br>这样就可以直接给Go Routine分配，因为不存在多个Go Routine竞争的情况，所以不会消耗锁资源。<br>mcache 的结构体定义：</p>
+</blockquote>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">go //path:Go SDK/src/runtime/mcache.go</span><br><span class="line"></span><br><span class="line"> _NumSizeClasses = 67                  //67 </span><br><span class="line">numSpanClasses = _NumSizeClasses &lt;&lt; 1 //134</span><br><span class="line"> type mcache struct &#123;   </span><br><span class="line">alloc [numSpanClasses]*mspan        //以numSpanClasses 为索引管理多个用于分配的 span </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>mcache用Span Classes作为索引管理多个用于分配的mspan，它包含所有规格的mspan。<br>它是 _NumSizeClasses 的2倍，也就是67*2&#x3D;134，为什么有一个两倍的关系。<br>为了加速之后内存回收的速度，数组里一半的mspan中分配的对象不包含指针，另一半则包含指针。对于无指针对象的mspan在进行垃圾回收的时候无需进一步扫描它是否引用了其他活跃的对象。</p>
+</blockquote>
+<h3 id="2、3、2-central"><a href="#2、3、2-central" class="headerlink" title="2、3、2 central"></a>2、3、2 central</h3><blockquote>
+<p>central：为所有mcache提供切分好的mspan资源。<br>每个central保存一种特定大小的全局mspan列表，包括已分配出去的和未分配出去的。<br>每个mcentral对应一种mspan，而mspan的种类导致它分割的object大小不同。</p>
+</blockquote>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"> go //path:Go SDK/src/runtime/mcentral.go</span><br><span class="line"></span><br><span class="line"> type mcentral struct &#123;   </span><br><span class="line">lock      mutex         // 互斥锁   </span><br><span class="line">sizeclass int32         // 规格   </span><br><span class="line">nonempty  mSpanList     // 尚有空闲object的mspan链表   </span><br><span class="line">empty     mSpanList     // 没有空闲object的mspan链表，或者是已被mcache取走的msapn链表   </span><br><span class="line">nmalloc   uint64        // 已累计分配的对象个数 </span><br><span class="line">&#125; </span><br></pre></td></tr></table></figure>
+
+<h3 id="2、3、3-heap"><a href="#2、3、3-heap" class="headerlink" title="2、3、3 heap"></a>2、3、3 heap</h3><blockquote>
+<p>heap：代表Go程序持有的所有堆空间，Go程序使用一个mheap的全局对象_mheap来管理堆内存。<br>当mcentral没有空闲的mspan时，会向mheap申请。而mheap没有资源时，会向操作系统申请新内存。mheap主要用于大对象的内存分配，以及管理未切割的mspan，用于给mcentral切割成小对象。<br>同时我们也看到，mheap中含有所有规格的mcentral，所以，当一个mcache从mcentral申请mspan时，只需要在独立的mcentral中使用锁，并不会影响申请其他规格的mspan。</p>
+</blockquote>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">//path:Go SDK/src/runtime/mheap.go </span><br><span class="line">type mheap struct &#123;   </span><br><span class="line">lock        mutex   </span><br><span class="line">spans       []*mspan // spans: 指向mspans区域，用于映射mspan和page的关系   </span><br><span class="line">bitmap      uintptr  // 指向bitmap首地址，bitmap是从高地址向低地址增长的   </span><br><span class="line">arena_start uintptr  // 指示arena区首地址   </span><br><span class="line">arena_used  uintptr  // 指示arena区已使用地址位置   </span><br><span class="line">arena_end   uintptr  // 指示arena区末地址   </span><br><span class="line">central [numSpanClasses]struct &#123;       </span><br><span class="line">mcentral mcentral       </span><br><span class="line">pad      [sys.CacheLineSize-unsafe.Sizeof(mcentral&#123;&#125;)%sys.CacheLineSize]byte </span><br><span class="line"></span><br><span class="line">  &#125;                   //每个 central 对应一种 sizeclass </span><br><span class="line">&#125;</span><br><span class="line"> </span><br></pre></td></tr></table></figure>
+
+<h3 id="2、4-分配流程"><a href="#2、4-分配流程" class="headerlink" title="2、4 分配流程"></a>2、4 分配流程</h3><ul>
+<li>计算待分配对象的规格（size_class）</li>
+<li>从cache.alloc数组中找到规格相同的span</li>
+<li>从span.manualFreeList链表提取可用object</li>
+<li>如果span.manualFreeList为空，从central获取新的span</li>
+<li>如果central.nonempty为空，从heap.free&#x2F;freelarge获取，并切分成object链表</li>
+<li>如果heap没有大小合适的span，向操作系统申请新的内存</li>
+</ul>
+<h3 id="2、5-释放流程"><a href="#2、5-释放流程" class="headerlink" title="2、5 释放流程"></a>2、5 释放流程</h3><ul>
+<li>将标记为可回收的object交还给所属的span.freelist</li>
+<li>该span被放回central，可以提供cache重新获取</li>
+<li>如果span以全部回收object，将其交还给heap，以便重新分切复用</li>
+<li>定期扫描heap里闲置的span，释放其占用的内存</li>
+</ul>
+<p>注意：以上流程不包含大对象，它直接从heap分配和释放</p>
+<h3 id="2、6-总结"><a href="#2、6-总结" class="headerlink" title="2、6 总结"></a>2、6 总结</h3><blockquote>
+<p>Go语言的内存分配非常复杂，它的一个原则就是能复用的一定要复用。</p>
+</blockquote>
+<ul>
+<li>Go在程序启动时，会向操作系统申请一大块内存，之后自行管理。</li>
+<li>Go内存管理的基本单元是mspan，它由若干个页组成，每种mspan可以分配特定大小的object。</li>
+<li>mcache, mcentral, mheap是Go内存管理的三大组件，层层递进。mcache管理线程在本地缓存的mspan；mcentral管理全局的mspan供所有线程使用；mheap管理Go的所有动态分配内存。</li>
+<li>一般小对象通过mspan分配内存；大对象则直接由mheap分配内存。</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/go/" rel="tag"># go</a>
+              <a href="/tags/%E5%86%85%E5%AD%98/" rel="tag"># 内存</a>
+              <a href="/tags/%E5%90%8E%E7%AB%AF/" rel="tag"># 后端</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/07/02/hello-world/" rel="prev" title="Hello World">
+      <i class="fa fa-chevron-left"></i> Hello World
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1%E3%80%81%E5%86%85%E5%AD%98%E5%88%86%E5%8C%BA"><span class="nav-number">1.</span> <span class="nav-text">1、内存分区</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1%E3%80%811-%E4%BB%A3%E7%A0%81%E5%8C%BA%EF%BC%88text%EF%BC%89"><span class="nav-number">1.1.</span> <span class="nav-text">1、1 代码区（text）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1%E3%80%812-%E5%85%A8%E5%B1%80%E5%88%9D%E5%A7%8B%E5%8C%96%E6%95%B0%E6%8D%AE%E5%8C%BA-x2F-%E9%9D%99%E6%80%81%E6%95%B0%E6%8D%AE%E5%8C%BA%EF%BC%88data%EF%BC%89"><span class="nav-number">1.2.</span> <span class="nav-text">1、2 全局初始化数据区&#x2F;静态数据区（data）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1%E3%80%813-%E6%9C%AA%E5%88%9D%E5%A7%8B%E5%8C%96%E6%95%B0%E6%8D%AE%E5%8C%BA%EF%BC%88bss%EF%BC%89"><span class="nav-number">1.3.</span> <span class="nav-text">1、3 未初始化数据区（bss）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1%E3%80%814-%E6%A0%88%E5%8C%BA%EF%BC%88stack%EF%BC%89"><span class="nav-number">1.4.</span> <span class="nav-text">1、4 栈区（stack）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1%E3%80%815-%E5%A0%86%E5%8C%BA%EF%BC%88heap%EF%BC%89"><span class="nav-number">1.5.</span> <span class="nav-text">1、5 堆区（heap）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2%E3%80%81-Go-Runtime%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D"><span class="nav-number">2.</span> <span class="nav-text">2、 Go Runtime内存分配</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2%E3%80%811-%E5%9F%BA%E6%9C%AC%E7%AD%96%E7%95%A5"><span class="nav-number">2.1.</span> <span class="nav-text">2、1 基本策略</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2%E3%80%812-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E5%8D%95%E5%85%83"><span class="nav-number">2.2.</span> <span class="nav-text">2、2 内存管理单元</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2%E3%80%813-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E7%BB%84%E4%BB%B6"><span class="nav-number">2.3.</span> <span class="nav-text">2、3 内存管理组件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2%E3%80%813%E3%80%811-cache"><span class="nav-number">2.4.</span> <span class="nav-text">2、3、1 cache</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2%E3%80%813%E3%80%812-central"><span class="nav-number">2.5.</span> <span class="nav-text">2、3、2 central</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2%E3%80%813%E3%80%813-heap"><span class="nav-number">2.6.</span> <span class="nav-text">2、3、3 heap</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2%E3%80%814-%E5%88%86%E9%85%8D%E6%B5%81%E7%A8%8B"><span class="nav-number">2.7.</span> <span class="nav-text">2、4 分配流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2%E3%80%815-%E9%87%8A%E6%94%BE%E6%B5%81%E7%A8%8B"><span class="nav-number">2.8.</span> <span class="nav-text">2、5 释放流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2%E3%80%816-%E6%80%BB%E7%BB%93"><span class="nav-number">2.9.</span> <span class="nav-text">2、6 总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="layne"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">layne</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">2</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/Laynegu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;Laynegu" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1686814964@qq.com" title="E-Mail → mailto:1686814964@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user-astronaut"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">layne</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+  <script defer src="/lib/three/three.min.js"></script>
+    <script defer src="/lib/three/canvas_sphere.min.js"></script>
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
