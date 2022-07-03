@@ -22,12 +22,12 @@
     var CONFIG = {"hostname":"laynegu.github.io","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta name="description" content="以下文章来源于Golang源码探索(二) 协程的实现原理 Golang最大的特色可以说是协程(goroutine)了, 协程让本来很复杂的异步编程变得简单, 让程序员不再需要面对回调地狱,虽然现在引入了协程的语言越来越多, 但go中的协程仍然是实现的是最彻底的.这篇文章将通过分析golang的源代码来讲解协程的实现原理. 这个系列分析的golang源代码是Google官方的实现的1.9.2版本,">
+  <meta name="description" content="以下文章来源于Golang源码探索(二) 协程的实现原理 Golang最大的特色可以说是协程(goroutine)了, 协程让本来很复杂的异步编程变得简单, 让程序员不再需要面对回调地狱,虽然现在引入了协程的语言越来越多, 但go中的协程仍然是实现的是最彻底的.这篇文章将通过分析golang的源代码来讲解协程的实现原理.">
 <meta property="og:type" content="article">
 <meta property="og:title" content="go 协程解析">
 <meta property="og:url" content="https://laynegu.github.io/2022/07/02/go%20%E5%8D%8F%E7%A8%8B%E8%A7%A3%E6%9E%90/index.html">
 <meta property="og:site_name" content="layne&#39;s Blog">
-<meta property="og:description" content="以下文章来源于Golang源码探索(二) 协程的实现原理 Golang最大的特色可以说是协程(goroutine)了, 协程让本来很复杂的异步编程变得简单, 让程序员不再需要面对回调地狱,虽然现在引入了协程的语言越来越多, 但go中的协程仍然是实现的是最彻底的.这篇文章将通过分析golang的源代码来讲解协程的实现原理. 这个系列分析的golang源代码是Google官方的实现的1.9.2版本,">
+<meta property="og:description" content="以下文章来源于Golang源码探索(二) 协程的实现原理 Golang最大的特色可以说是协程(goroutine)了, 协程让本来很复杂的异步编程变得简单, 让程序员不再需要面对回调地狱,虽然现在引入了协程的语言越来越多, 但go中的协程仍然是实现的是最彻底的.这篇文章将通过分析golang的源代码来讲解协程的实现原理.">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://images2017.cnblogs.com/blog/881857/201711/881857-20171110171241372-2120016927.png">
 <meta property="og:image" content="https://images2017.cnblogs.com/blog/881857/201711/881857-20171110171251091-1325784333.png">

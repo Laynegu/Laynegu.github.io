@@ -207,7 +207,6 @@
       
           <p>以下文章来源于<br><a target="_blank" rel="noopener" href="https://www.cnblogs.com/zkweb/p/7880099.html">Golang源码探索(三) GC的实现原理</a></p>
 <p>Golang从1.5开始引入了三色GC, 经过多次改进, 当前的1.9版本的GC停顿时间已经可以做到极短.<br>停顿时间的减少意味着”最大响应时间”的缩短, 这也让go更适合编写网络服务程序.<br>这篇文章将通过分析golang的源代码来讲解go中的三色GC的实现原理.</p>
-<p>这个系列分析的golang源代码是Google官方的实现的1.9.2版本, 不适用于其他版本和gccgo等其他实现,<br>运行环境是Ubuntu 16.04 LTS 64bit.<br>首先会讲解基础概念, 然后讲解分配器, 再讲解收集器的实现.</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/2022/07/02/go%20GC%E8%A7%A3%E6%9E%90/#more" rel="contents">
@@ -283,7 +282,6 @@
 
       
           <h1 id="Golang-map的底层实现"><a href="#Golang-map的底层实现" class="headerlink" title="Golang map的底层实现"></a>Golang map的底层实现</h1><p><strong>map</strong> 是Go语言中基础的数据结构，在日常的使用中经常被用到。但是它底层是如何实现的呢？</p>
-<p>总体来说golang的map是hashmap，是使用数组+链表的形式实现的，使用拉链法消除hash冲突。</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/2022/07/02/go%20map%E8%A7%A3%E6%9E%90/#more" rel="contents">
@@ -360,7 +358,6 @@
       
           <p>以下文章来源于<br><a target="_blank" rel="noopener" href="https://www.cnblogs.com/zkweb/p/7815600.html">Golang源码探索(二) 协程的实现原理</a></p>
 <p>Golang最大的特色可以说是协程(goroutine)了, 协程让本来很复杂的异步编程变得简单, 让程序员不再需要面对回调地狱,<br>虽然现在引入了协程的语言越来越多, 但go中的协程仍然是实现的是最彻底的.<br>这篇文章将通过分析golang的源代码来讲解协程的实现原理.</p>
-<p>这个系列分析的golang源代码是Google官方的实现的1.9.2版本, 不适用于其他版本和gccgo等其他实现,<br>运行环境是Ubuntu 16.04 LTS 64bit.</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/2022/07/02/go%20%E5%8D%8F%E7%A8%8B%E8%A7%A3%E6%9E%90/#more" rel="contents">
@@ -438,7 +435,6 @@
           <h2 id="1、内存分区"><a href="#1、内存分区" class="headerlink" title="1、内存分区"></a>1、内存分区</h2><blockquote>
 <p>代码经过预处理、编译、汇编、链接4步后生成一个可执行程序。<br>在 Windows 下，程序是一个普通的可执行文件，以下列出一个二进制可执行文件的基本情况：</p>
 </blockquote>
-<p><img src="https://pic2.zhimg.com/80/v2-d3e619e2bcc7aa1ce897a5bb58061ee9_720w.jpg" alt="img"></p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/2022/07/02/go%E5%86%85%E5%AD%98%E8%A7%A3%E6%9E%90/#more" rel="contents">
